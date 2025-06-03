@@ -1,0 +1,28 @@
+distributed_backend: "nccl"
+num_cpu_workers: 4
+
+# Data
+data_path: "LI-Small-Trans.csv"
+k_neighborhood_transactions: 20
+train_split_ration: 0.8
+
+# Model Architecture
+account_embedding_dim: 64
+transaction_embedding_dim: 64
+gnn_hidden_dim: 128
+gnn_num_layers: 3
+model_output_class: 1
+
+# Training
+epochs: 15
+batch_size_per_gpu: 128
+learning_rate: 0.0001
+weight_decay: 0.00001
+print_interval_bathches: 1000
+pos_weight_enabled: true
+gradient_accumulation_steps: 1
+
+# Visualization
+visualization_enabled: true
+plot_threshold: 0.5
+s
