@@ -1,5 +1,8 @@
-/venv
+/pytorch_env
+/shell_logs
 /config.sh
 /NOTE_GNN.txt
 /notes.txt
 /LI-Small_Trans.csv
+/gnn_weights.pth
+/jobs
