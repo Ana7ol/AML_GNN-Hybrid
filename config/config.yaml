@@ -3,7 +3,7 @@ num_cpu_workers: 6
 
 # Data
 data_path: "LI-Small_Trans.csv"
-k_neighborhood_transactions: 30
+k_neighborhood_transactions: 40
 train_split_ratio: 0.8
 random_seed: 42
 

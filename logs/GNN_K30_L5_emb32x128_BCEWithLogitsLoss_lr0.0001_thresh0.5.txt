@@ -1,99 +1,26 @@
 Preprocessing data and converting to NumPy arrays (for PyG)...
 Found 1 device(s). Running in a single process.
-Saving results for this run in: results/k_30_acc_emb_32_trn_emb_128
+Saving results for this run in: results/k_40_acc_emb_32_trn_emb_128
 Running in single-device mode on device 0.
 Using loss function: BCEWithLogitsLoss
-BCEWithLogitsLoss using pos_weight: 2097.19
+BCEWithLogitsLoss using pos_weight: 2097.18
 --- Epoch 1/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.7791, Duration: 211.67s
-Saved raw predictions for epoch 1 to results/k_30_acc_emb_32_trn_emb_128/epoch_1_results.csv
-  Global Eval ==> AUROC: 0.9201, AUPRC: 0.0137
-    F1 Score (at threshold 0.5): 0.0062
+  Avg Train Loss: 0.8073, Duration: 210.38s
+Saved raw predictions for epoch 1 to results/k_40_acc_emb_32_trn_emb_128/epoch_1_results.csv
+  Global Eval ==> AUROC: 0.9153, AUPRC: 0.0079
+    F1 Score (at threshold 0.5): 0.0061
     Classification Report:
               precision    recall  f1-score   support
 
-   Licit (0)       1.00      0.80      0.89   1383855
- Illicit (1)       0.00      0.94      0.01       925
+   Licit (0)       1.00      0.80      0.89   1383845
+ Illicit (1)       0.00      0.93      0.01       925
 
-    accuracy                           0.80   1384780
-   macro avg       0.50      0.87      0.45   1384780
-weighted avg       1.00      0.80      0.89   1384780
+    accuracy                           0.80   1384770
+   macro avg       0.50      0.86      0.45   1384770
+weighted avg       1.00      0.80      0.89   1384770
 
     Confusion matrix:
-[[1104282  279573]
- [     55     870]]
+[[1102780  281065]
+ [     65     860]]
 --- Epoch 2/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.6223, Duration: 208.96s
-Saved raw predictions for epoch 2 to results/k_30_acc_emb_32_trn_emb_128/epoch_2_results.csv
-  Global Eval ==> AUROC: 0.9338, AUPRC: 0.0220
-    F1 Score (at threshold 0.5): 0.0063
-    Classification Report:
-              precision    recall  f1-score   support
-
-   Licit (0)       1.00      0.80      0.89   1383855
- Illicit (1)       0.00      0.96      0.01       925
-
-    accuracy                           0.80   1384780
-   macro avg       0.50      0.88      0.45   1384780
-weighted avg       1.00      0.80      0.89   1384780
-
-    Confusion matrix:
-[[1103799  280056]
- [     34     891]]
---- Epoch 3/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.6006, Duration: 206.86s
-Saved raw predictions for epoch 3 to results/k_30_acc_emb_32_trn_emb_128/epoch_3_results.csv
-  Global Eval ==> AUROC: 0.9456, AUPRC: 0.0287
-    F1 Score (at threshold 0.5): 0.0069
-    Classification Report:
-              precision    recall  f1-score   support
-
-   Licit (0)       1.00      0.82      0.90   1383855
- Illicit (1)       0.00      0.95      0.01       925
-
-    accuracy                           0.82   1384780
-   macro avg       0.50      0.89      0.45   1384780
-weighted avg       1.00      0.82      0.90   1384780
-
-    Confusion matrix:
-[[1131261  252594]
- [     43     882]]
---- Epoch 4/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.6020, Duration: 210.11s
-Saved raw predictions for epoch 4 to results/k_30_acc_emb_32_trn_emb_128/epoch_4_results.csv
-  Global Eval ==> AUROC: 0.9360, AUPRC: 0.0276
-    F1 Score (at threshold 0.5): 0.0070
-    Classification Report:
-              precision    recall  f1-score   support
-
-   Licit (0)       1.00      0.83      0.91   1383855
- Illicit (1)       0.00      0.91      0.01       925
-
-    accuracy                           0.83   1384780
-   macro avg       0.50      0.87      0.46   1384780
-weighted avg       1.00      0.83      0.91   1384780
-
-    Confusion matrix:
-[[1145495  238360]
- [     79     846]]
---- Epoch 5/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.5785, Duration: 199.15s
-Saved raw predictions for epoch 5 to results/k_30_acc_emb_32_trn_emb_128/epoch_5_results.csv
-  Global Eval ==> AUROC: 0.9375, AUPRC: 0.0299
-    F1 Score (at threshold 0.5): 0.0066
-    Classification Report:
-              precision    recall  f1-score   support
-
-   Licit (0)       1.00      0.81      0.89   1383855
- Illicit (1)       0.00      0.96      0.01       925
-
-    accuracy                           0.81   1384780
-   macro avg       0.50      0.88      0.45   1384780
-weighted avg       1.00      0.81      0.89   1384780
-
-    Confusion matrix:
-[[1114777  269078]
- [     36     889]]
-
---- Final Model Parameters for this Run ---
-Parameter amount: 23332065
+  Avg Train Loss: 0.6311, Duration: 213.66s

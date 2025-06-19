@@ -1,14 +1,14 @@
 # =============================================================================
 #
-# FULL SCRIPT - PARALLEL PREPROCESSING (Version 7)
+# FULL SCRIPT - BALANCED PARALLEL PREPROCESSING (Version 8)
 #
 # Key Improvements in this version:
-# 1. Parallelized Preprocessing: The most time-consuming part of the data
-#    preparation (`create_transaction_sequences`) has been parallelized
-#    using `joblib`. It will now use all available CPU cores to process
-#    account groups simultaneously, dramatically speeding up this step.
-# 2. New Dependency: This version requires the `joblib` library.
-#    Install with: `pip install joblib`
+# 1. True Parallel Load Balancing: The sequence creation step now pre-chunks
+#    the account groups before sending them to worker processes. This prevents
+#    the main process from becoming a bottleneck and ensures all CPU cores
+#    are utilized effectively, leading to a major speedup.
+# 2. Optimized Worker Function: The helper function now processes a large
+#    chunk of accounts, minimizing the overhead of parallelization.
 #
 # =============================================================================
 
@@ -51,6 +51,7 @@ else:
 # General Hyperparameters
 ENCODER_EMBEDDING_DIM = 128
 PROJECTION_DIM = 32
+# Adjust batch size based on number of GPUs to maintain effective batch size per GPU
 BATCH_SIZE = 128 * max(1, NUM_GPUS)
 print(f"Effective Batch Size: {BATCH_SIZE}")
 EPOCHS = 10 # SSL Epochs
@@ -62,7 +63,7 @@ TEMPERATURE = 0.1
 SEQUENCE_LENGTH = 30
 STEP_SIZE = 5
 
-# --- 3. PREPROCESSING AND DATASET CLASSES ---
+# --- 3. PREPROCESSING AND DATASET CLASSES (Parallelized Version) ---
 
 def preprocess_features(df_input):
     print("Starting feature preprocessing...")
@@ -99,34 +100,35 @@ def preprocess_features(df_input):
     print(f"\nPreprocessing finished. Final feature shape: {df.shape}")
     return df.values.astype(np.float32)
 
-def _process_account_group(group_tuple, sequence_length, step_size, feature_cols):
+def _process_chunk_of_accounts(groups_chunk, sequence_length, step_size, feature_cols):
     """
-    Helper function to process a single account's transactions.
-    Designed to be called in parallel.
+    Helper function to process a large chunk of account groups.
+    This function is called by a single parallel worker.
     """
-    _, group = group_tuple
-    group_sequences = []
-    group_labels = []
+    chunk_sequences = []
+    chunk_labels = []
     
-    transactions = group[feature_cols].values
-    labels = group['Is Laundering'].values
-    num_transactions = len(transactions)
+    # This loop runs inside the worker process
+    for _, group in groups_chunk:
+        transactions = group[feature_cols].values
+        labels = group['Is Laundering'].values
+        num_transactions = len(transactions)
 
-    if num_transactions < sequence_length:
-        padding_needed = sequence_length - num_transactions
-        padded_features = np.pad(transactions, ((0, padding_needed), (0, 0)), 'constant', constant_values=0)
-        group_sequences.append(padded_features)
-        group_labels.append(labels[-1])
-    else:
-        for i in range(0, num_transactions - sequence_length + 1, step_size):
-            group_sequences.append(transactions[i : i + sequence_length])
-            group_labels.append(labels[i + sequence_length - 1])
-            
-    return group_sequences, group_labels
+        if num_transactions < sequence_length:
+            padding_needed = sequence_length - num_transactions
+            padded_features = np.pad(transactions, ((0, padding_needed), (0, 0)), 'constant', constant_values=0)
+            chunk_sequences.append(padded_features)
+            chunk_labels.append(labels[-1])
+        else:
+            for i in range(0, num_transactions - sequence_length + 1, step_size):
+                chunk_sequences.append(transactions[i : i + sequence_length])
+                chunk_labels.append(labels[i + sequence_length - 1])
+                
+    return chunk_sequences, chunk_labels
 
 def create_transaction_sequences_parallel(df_original_with_ts, features_processed, sequence_length=10, step_size=5):
     """
-    Transforms a flat list of transactions into sequences in parallel.
+    Transforms a flat list of transactions into sequences using balanced parallel processing.
     """
     print(f"Creating sequences with length {sequence_length} and step {step_size}...")
     df_temp = df_original_with_ts.copy()
@@ -134,22 +136,34 @@ def create_transaction_sequences_parallel(df_original_with_ts, features_processe
     df_temp[feature_cols] = features_processed
     df_temp.sort_values(by=['Account', 'Timestamp'], inplace=True)
     
-    # Use all available CPU cores
-    n_jobs = -1
-    print(f"Starting parallel processing for sequence creation on {os.cpu_count()} cores...")
+    n_jobs = -1  # Use all available cores
+    cpu_count = os.cpu_count()
+    print(f"Starting balanced parallel processing for sequence creation on {cpu_count} cores...")
     
-    # Group by account and process each group in parallel
+    # Group data in memory
     grouped = df_temp.groupby('Account')
+    
+    # Pre-chunk the groups to ensure balanced workload
+    # We create a number of chunks proportional to the number of cores
+    n_chunks = cpu_count * 4  # Create more chunks than cores for better dynamic scheduling
+    all_groups = list(grouped)
+    chunk_size = len(all_groups) // n_chunks + 1
+    chunks = [all_groups[i:i + chunk_size] for i in range(0, len(all_groups), chunk_size)]
+    
+    print(f"Split {len(all_groups)} account groups into {len(chunks)} chunks for parallel processing.")
+    
+    # Process the chunks in parallel
     results = Parallel(n_jobs=n_jobs, verbose=10)(
-        delayed(_process_account_group)(group, sequence_length, step_size, feature_cols) for group in grouped
+        delayed(_process_chunk_of_accounts)(chunk, sequence_length, step_size, feature_cols) for chunk in chunks
     )
     
     # Collect results from all parallel processes
     all_sequences = []
     all_labels = []
-    for group_sequences, group_labels in results:
-        all_sequences.extend(group_sequences)
-        all_labels.extend(group_labels)
+    print("Collecting results from parallel workers...")
+    for chunk_sequences, chunk_labels in results:
+        all_sequences.extend(chunk_sequences)
+        all_labels.extend(chunk_labels)
         
     final_sequences = np.array(all_sequences, dtype=np.float32)
     final_labels = np.array(all_labels, dtype=np.int64)
@@ -238,19 +252,19 @@ def create_pyg_graph(df, transaction_embeddings, labels, num_nodes):
     print("\n--- Graph Construction Complete ---")
     return train_data, val_data, test_data
 
-class EdgeClassifierGNN(torch.nn.Module):
+class EdgeClassifierGNN(nn.Module):
     def __init__(self, num_nodes, node_feat_dim, edge_feat_dim, hidden_dim, out_channels=1):
         super().__init__()
-        self.node_emb = torch.nn.Embedding(num_nodes, node_feat_dim)
+        self.node_emb = nn.Embedding(num_nodes, node_feat_dim)
         self.conv1 = SAGEConv(node_feat_dim, hidden_dim)
         self.conv2 = SAGEConv(hidden_dim, hidden_dim)
         classifier_in_dim = 2 * hidden_dim + edge_feat_dim
-        self.classifier = torch.nn.Sequential(
-            torch.nn.Linear(classifier_in_dim, hidden_dim),
+        self.classifier = nn.Sequential(
+            nn.Linear(classifier_in_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.5),
-            torch.nn.Linear(hidden_dim, out_channels)
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_dim, out_channels)
         )
         print("Initialized GNN that uses both node and edge features (EdgeClassifierGNN)")
     def encode(self, x, edge_index):
@@ -262,11 +276,12 @@ class EdgeClassifierGNN(torch.nn.Module):
         dst_emb = h[edge_label_index[1]]
         final_edge_emb = torch.cat([src_emb, dst_emb, edge_attr], dim=-1)
         return self.classifier(final_edge_emb)
+    # This special forward is for PyG's DataParallel, which is not used here for simplicity
+    # but kept for potential future use. The direct train/test calls are clearer.
     def forward(self, data):
-        # This forward is for PyG's DataParallel
-        x = self.node_emb(data.n_id) # Assumes node ids are passed as n_id
-        h = self.encode(x, data.edge_index)
+        h = self.encode(self.node_emb.weight, data.edge_index)
         return self.decode(h, data.edge_label_index, data.edge_attr)
+
 
 # --- 6. MAIN EXECUTION BLOCK ---
 if __name__ == '__main__':
@@ -290,7 +305,6 @@ if __name__ == '__main__':
     
     # === STAGE 1: SELF-SUPERVISED TRAINING OF THE ENCODER ===
     print("\n" + "="*50 + "\nSTAGE 1: SELF-SUPERVISED LEARNING (SSL) PRE-TRAINING\n" + "="*50 + "\n")
-    # Call the new parallelized function
     X_sequences_np, _ = create_transaction_sequences_parallel(df_gnn, X_features_np, SEQUENCE_LENGTH, STEP_SIZE)
     if X_sequences_np.size == 0:
         print("\nERROR: Sequence creation failed. Halting.")
@@ -366,7 +380,7 @@ if __name__ == '__main__':
     
     if NUM_GPUS > 1:
         print(f"Wrapping GNN model for {NUM_GPUS} GPUs...")
-        gnn_model = PyGDataParallel(gnn_model)
+        gnn_model = nn.DataParallel(gnn_model)
 
     gnn_optimizer = torch.optim.Adam(gnn_model.parameters(), lr=0.001)
     gnn_criterion = torch.nn.BCEWithLogitsLoss()
@@ -377,10 +391,8 @@ if __name__ == '__main__':
     def train_gnn():
         gnn_model.train()
         gnn_optimizer.zero_grad()
-        # DataParallel/PyGDataParallel handles scattering data automatically
-        # For a single graph, this is simple. For multiple graphs, use a DataLoader.
-        model_to_train = gnn_model.module if isinstance(gnn_model, PyGDataParallel) else gnn_model
-        h = model_to_train.encode(train_graph.edge_index)
+        model_to_train = gnn_model.module if isinstance(gnn_model, nn.DataParallel) else gnn_model
+        h = model_to_train.encode(model_to_train.node_emb.weight, train_graph.edge_index)
         preds = model_to_train.decode(h, train_graph.edge_label_index, train_graph.edge_attr)
         loss = gnn_criterion(preds.squeeze(), train_graph.edge_label)
         loss.backward()
@@ -391,11 +403,12 @@ if __name__ == '__main__':
     def test_gnn(graph):
         gnn_model.eval()
         graph_on_device = graph.to(DEVICE)
-        model_to_test = gnn_model.module if isinstance(gnn_model, (nn.DataParallel, PyGDataParallel)) else gnn_model
-        h = model_to_test.encode(graph_on_device.edge_index)
+        model_to_test = gnn_model.module if isinstance(gnn_model, nn.DataParallel) else gnn_model
+        h = model_to_test.encode(model_to_test.node_emb.weight, graph_on_device.edge_index)
         preds = model_to_test.decode(h, graph_on_device.edge_label_index, graph_on_device.edge_attr)
         probs = preds.squeeze().sigmoid()
-        y_true, y_prob = graph_on_device.edge_label.cpu().numpy(), probs.cpu().numpy()
+        y_true = graph_on_device.edge_label.cpu().numpy()
+        y_prob = probs.cpu().numpy()
         y_pred = (y_prob > 0.5).astype(int)
         if len(np.unique(y_true)) < 2:
             return 0.5, np.mean(y_true), y_true, y_pred
