@@ -130,3 +130,4 @@ Projection Head: Input=128, Hidden=128, Output=32
 Wrapping SSL models for 2 GPUs...
 
 --- Starting SSL Training (with LR Scheduler) ---
+Epoch [1/10], Avg Loss: 1.5494

@@ -8,3 +8,5 @@
 /jobs
 /results
 /logs
+/gnn.sh.*
+/hybrid.sh.*

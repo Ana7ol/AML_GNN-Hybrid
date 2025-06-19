@@ -24,3 +24,19 @@ weighted avg       1.00      0.80      0.89   1384770
  [     65     860]]
 --- Epoch 2/5 Summary (Rank 0) ---
   Avg Train Loss: 0.6311, Duration: 213.66s
+Saved raw predictions for epoch 2 to results/k_40_acc_emb_32_trn_emb_128/epoch_2_results.csv
+  Global Eval ==> AUROC: 0.9380, AUPRC: 0.0189
+    F1 Score (at threshold 0.5): 0.0066
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      0.81      0.89   1383845
+ Illicit (1)       0.00      0.97      0.01       925
+
+    accuracy                           0.81   1384770
+   macro avg       0.50      0.89      0.45   1384770
+weighted avg       1.00      0.81      0.89   1384770
+
+    Confusion matrix:
+[[1115555  268290]
+ [     30     895]]
