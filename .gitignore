@@ -10,3 +10,4 @@
 /logs
 /gnn.sh.*
 /hybrid.sh.*
+/gnn_weights.pth
