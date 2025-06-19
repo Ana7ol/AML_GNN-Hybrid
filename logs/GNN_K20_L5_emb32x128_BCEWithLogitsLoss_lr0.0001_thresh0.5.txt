@@ -1,0 +1,116 @@
+Found free port for DDP: 56007
+Preprocessing data and converting to NumPy arrays (for PyG)...
+Found 2 GPUs. Spawning DDP processes.
+Saving results for this run in: results/k_30_acc_emb_32_trn_emb_128
+Running DDP on rank 0 / GPU 0.
+Using loss function: BCEWithLogitsLoss
+Running DDP on rank 1 / GPU 1.
+Using loss function: BCEWithLogitsLoss
+BCEWithLogitsLoss using pos_weight: 2097.19
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+--- Epoch 1/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.8149, Duration: 167.26s
+Saved raw predictions for epoch 1 to results/k_30_acc_emb_32_trn_emb_128/epoch_1_results.csv
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+  Global Eval ==> AUROC: 0.9322, AUPRC: 0.0095
+    F1 Score (at threshold 0.5): 0.0061
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      0.79      0.88   1383855
+ Illicit (1)       0.00      0.95      0.01       925
+
+    accuracy                           0.79   1384780
+   macro avg       0.50      0.87      0.45   1384780
+weighted avg       1.00      0.79      0.88   1384780
+
+    Confusion matrix:
+[[1098109  285746]
+ [     43     882]]
+--- Epoch 2/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.5985, Duration: 155.07s
+Saved raw predictions for epoch 2 to results/k_30_acc_emb_32_trn_emb_128/epoch_2_results.csv
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+  Global Eval ==> AUROC: 0.9366, AUPRC: 0.0160
+    F1 Score (at threshold 0.5): 0.0064
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      0.80      0.89   1383855
+ Illicit (1)       0.00      0.97      0.01       925
+
+    accuracy                           0.80   1384780
+   macro avg       0.50      0.88      0.45   1384780
+weighted avg       1.00      0.80      0.89   1384780
+
+    Confusion matrix:
+[[1104441  279414]
+ [     27     898]]
+--- Epoch 3/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.5087, Duration: 160.18s
+Saved raw predictions for epoch 3 to results/k_30_acc_emb_32_trn_emb_128/epoch_3_results.csv
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+  Global Eval ==> AUROC: 0.9247, AUPRC: 0.0128
+    F1 Score (at threshold 0.5): 0.0064
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      0.81      0.90   1383855
+ Illicit (1)       0.00      0.91      0.01       925
+
+    accuracy                           0.81   1384780
+   macro avg       0.50      0.86      0.45   1384780
+weighted avg       1.00      0.81      0.90   1384780
+
+    Confusion matrix:
+[[1122331  261524]
+ [     79     846]]
+--- Epoch 4/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.4684, Duration: 156.85s
+Saved raw predictions for epoch 4 to results/k_30_acc_emb_32_trn_emb_128/epoch_4_results.csv
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+  Global Eval ==> AUROC: 0.9215, AUPRC: 0.0188
+    F1 Score (at threshold 0.5): 0.0067
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      0.83      0.91   1383855
+ Illicit (1)       0.00      0.86      0.01       925
+
+    accuracy                           0.83   1384780
+   macro avg       0.50      0.85      0.46   1384780
+weighted avg       1.00      0.83      0.91   1384780
+
+    Confusion matrix:
+[[1148179  235676]
+ [    125     800]]
+--- Epoch 5/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.4351, Duration: 156.00s
+Saved raw predictions for epoch 5 to results/k_30_acc_emb_32_trn_emb_128/epoch_5_results.csv
+/data/home/ec24713/AML/pytorch_env/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+  Global Eval ==> AUROC: 0.9266, AUPRC: 0.0276
+    F1 Score (at threshold 0.5): 0.0068
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      0.83      0.91   1383855
+ Illicit (1)       0.00      0.87      0.01       925
+
+    accuracy                           0.83   1384780
+   macro avg       0.50      0.85      0.46   1384780
+weighted avg       1.00      0.83      0.91   1384780
+
+    Confusion matrix:
+[[1149214  234641]
+ [    121     804]]
+
+--- Final Model Parameters for this Run ---
+Parameter amount: 23332065

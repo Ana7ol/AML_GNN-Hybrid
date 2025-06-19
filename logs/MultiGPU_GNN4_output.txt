@@ -1,4 +1,4 @@
-Tue Jun 10 10:33:24 2025       
+Wed Jun 11 17:53:17 2025       
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 570.86.10              Driver Version: 570.86.10      CUDA Version: 12.8     |
 |-----------------------------------------+------------------------+----------------------+
@@ -7,19 +7,19 @@ Tue Jun 10 10:33:24 2025
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
 |   0  NVIDIA A100-PCIE-40GB          On  |   00000000:06:00.0 Off |                    0 |
-| N/A   33C    P0             32W /  250W |       6MiB /  40960MiB |      0%      Default |
+| N/A   39C    P0             56W /  250W |       6MiB /  40960MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   1  NVIDIA A100-PCIE-40GB          On  |   00000000:2F:00.0 Off |                    0 |
-| N/A   45C    P0             36W /  250W |      86MiB /  40960MiB |      0%      Default |
+| N/A   37C    P0             39W /  250W |      22MiB /  40960MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   2  NVIDIA A100-PCIE-40GB          On  |   00000000:86:00.0 Off |                    0 |
-| N/A   34C    P0             30W /  250W |      70MiB /  40960MiB |      0%      Default |
+| N/A   36C    P0             48W /  250W |      70MiB /  40960MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   3  NVIDIA A100-PCIE-40GB          On  |   00000000:D8:00.0 Off |                    0 |
-| N/A   31C    P0             33W /  250W |      90MiB /  40960MiB |      0%      Default |
+| N/A   36C    P0             50W /  250W |      90MiB /  40960MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
                                                                                          
@@ -32,98 +32,98 @@ Tue Jun 10 10:33:24 2025
 +-----------------------------------------------------------------------------------------+
 Preprocessing data and converting to NumPy arrays (for PyG)...
 Found 4 GPUs. Spawning DDP processes.
-Running DDP on rank 0 / GPU 0.
-Using loss function: FocalLoss
 Running DDP on rank 2 / GPU 2.
 Using loss function: FocalLoss
+Running DDP on rank 0 / GPU 0.
+Using loss function: FocalLoss
+FocalLoss using alpha=0.25, gamma=2
 Running DDP on rank 3 / GPU 3.
 Using loss function: FocalLoss
 Running DDP on rank 1 / GPU 1.
 Using loss function: FocalLoss
-FocalLoss using alpha=0.25, gamma=2
 --- Epoch 1/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.8709, Duration: 224.39s
-  Global Eval ==> AUROC: 0.9334, AUPRC: 0.0075
+  Avg Train Loss: 1.2801, Duration: 230.77s
+  Global Eval ==> AUROC: 0.8803, AUPRC: 0.0074
     F1 Score (at threshold 0.98): 0.0000
     Classification Report:
               precision    recall  f1-score   support
 
-   Licit (0)       1.00      1.00      1.00   1383855
+   Licit (0)       1.00      1.00      1.00   1383867
  Illicit (1)       0.00      0.00      0.00       925
 
-    accuracy                           1.00   1384780
-   macro avg       0.50      0.50      0.50   1384780
-weighted avg       1.00      1.00      1.00   1384780
+    accuracy                           1.00   1384792
+   macro avg       0.50      0.50      0.50   1384792
+weighted avg       1.00      1.00      1.00   1384792
 
     Confusion matrix:
-[[1383855       0]
+[[1383867       0]
  [    925       0]]
 --- Epoch 2/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.5927, Duration: 218.71s
-  Global Eval ==> AUROC: 0.9356, AUPRC: 0.0176
-    F1 Score (at threshold 0.98): 0.0444
+  Avg Train Loss: 1.0237, Duration: 237.30s
+  Global Eval ==> AUROC: 0.9142, AUPRC: 0.0076
+    F1 Score (at threshold 0.98): 0.0000
     Classification Report:
               precision    recall  f1-score   support
 
-   Licit (0)       1.00      1.00      1.00   1383855
- Illicit (1)       0.15      0.03      0.04       925
+   Licit (0)       1.00      1.00      1.00   1383867
+ Illicit (1)       0.00      0.00      0.00       925
 
-    accuracy                           1.00   1384780
-   macro avg       0.58      0.51      0.52   1384780
-weighted avg       1.00      1.00      1.00   1384780
+    accuracy                           1.00   1384792
+   macro avg       0.50      0.50      0.50   1384792
+weighted avg       1.00      1.00      1.00   1384792
 
     Confusion matrix:
-[[1383722     133]
- [    901      24]]
+[[1383867       0]
+ [    925       0]]
 --- Epoch 3/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.4584, Duration: 216.68s
-  Global Eval ==> AUROC: 0.9164, AUPRC: 0.0213
-    F1 Score (at threshold 0.98): 0.0518
+  Avg Train Loss: 0.8797, Duration: 229.08s
+  Global Eval ==> AUROC: 0.9283, AUPRC: 0.0073
+    F1 Score (at threshold 0.98): 0.0000
     Classification Report:
               precision    recall  f1-score   support
 
-   Licit (0)       1.00      1.00      1.00   1383855
- Illicit (1)       0.04      0.09      0.05       925
+   Licit (0)       1.00      1.00      1.00   1383867
+ Illicit (1)       0.00      0.00      0.00       925
 
-    accuracy                           1.00   1384780
-   macro avg       0.52      0.54      0.53   1384780
-weighted avg       1.00      1.00      1.00   1384780
+    accuracy                           1.00   1384792
+   macro avg       0.50      0.50      0.50   1384792
+weighted avg       1.00      1.00      1.00   1384792
 
     Confusion matrix:
-[[1381807    2048]
- [    846      79]]
+[[1383867       0]
+ [    925       0]]
 --- Epoch 4/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.3425, Duration: 216.70s
-  Global Eval ==> AUROC: 0.8814, AUPRC: 0.0161
-    F1 Score (at threshold 0.98): 0.0338
+  Avg Train Loss: 0.8028, Duration: 236.31s
+  Global Eval ==> AUROC: 0.9325, AUPRC: 0.0072
+    F1 Score (at threshold 0.98): 0.0000
     Classification Report:
               precision    recall  f1-score   support
 
-   Licit (0)       1.00      1.00      1.00   1383855
- Illicit (1)       0.02      0.12      0.03       925
+   Licit (0)       1.00      1.00      1.00   1383867
+ Illicit (1)       0.00      0.00      0.00       925
 
-    accuracy                           1.00   1384780
-   macro avg       0.51      0.56      0.52   1384780
-weighted avg       1.00      1.00      1.00   1384780
+    accuracy                           1.00   1384792
+   macro avg       0.50      0.50      0.50   1384792
+weighted avg       1.00      1.00      1.00   1384792
 
     Confusion matrix:
-[[1378442    5413]
- [    816     109]]
+[[1383867       0]
+ [    925       0]]
 --- Epoch 5/5 Summary (Rank 0) ---
-  Avg Train Loss: 0.2789, Duration: 218.67s
-  Global Eval ==> AUROC: 0.7869, AUPRC: 0.0100
-    F1 Score (at threshold 0.98): 0.0269
+  Avg Train Loss: 0.7513, Duration: 244.77s
+  Global Eval ==> AUROC: 0.9343, AUPRC: 0.0076
+    F1 Score (at threshold 0.98): 0.0000
     Classification Report:
               precision    recall  f1-score   support
 
-   Licit (0)       1.00      1.00      1.00   1383855
- Illicit (1)       0.02      0.11      0.03       925
+   Licit (0)       1.00      1.00      1.00   1383867
+ Illicit (1)       0.00      0.00      0.00       925
 
-    accuracy                           0.99   1384780
-   macro avg       0.51      0.55      0.51   1384780
-weighted avg       1.00      0.99      1.00   1384780
+    accuracy                           1.00   1384792
+   macro avg       0.50      0.50      0.50   1384792
+weighted avg       1.00      1.00      1.00   1384792
 
     Confusion matrix:
-[[1377064    6791]
- [    820     105]]
+[[1383867       0]
+ [    925       0]]
 parameter amount: 23069409

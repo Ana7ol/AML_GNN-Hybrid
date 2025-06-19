@@ -1,0 +1,142 @@
+Thu Jun 12 08:40:28 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.86.10              Driver Version: 570.86.10      CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-16GB           On  |   00000000:58:00.0 Off |                    0 |
+| N/A   33C    P0             25W /  250W |       4MiB /  16384MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Using device: cuda
+
+==================================================
+STAGE 1: SELF-SUPERVISED LEARNING (SSL) PRE-TRAINING
+==================================================
+
+Starting preprocessing...
+Dropping 'Is Laundering' column for SSL feature preparation.
+Processing Timestamp...
+Processing Account Numbers...
+Processing Amounts...
+Warning: Amount/Currency pairs are not always identical. Dropping 'Amount Paid' & 'Payment Currency'.
+Processing Categorical String Features (Currency, Payment Format)...
+
+Scaling all numerical features...
+Columns to be scaled: ['From Bank', 'To Bank', 'Hour_sin', 'Hour_cos', 'Minute_sin', 'Minute_cos', 'DayOfWeek_sin', 'DayOfWeek_cos', 'Month_sin', 'Month_cos', 'Account_Num', 'Account.1_Num', 'Amount_Log', 'Currency_Australian Dollar', 'Currency_Bitcoin', 'Currency_Brazil Real', 'Currency_Canadian Dollar', 'Currency_Euro', 'Currency_Mexican Peso', 'Currency_Ruble', 'Currency_Rupee', 'Currency_Saudi Riyal', 'Currency_Shekel', 'Currency_Swiss Franc', 'Currency_UK Pound', 'Currency_US Dollar', 'Currency_Yen', 'Currency_Yuan', 'Format_ACH', 'Format_Bitcoin', 'Format_Cash', 'Format_Cheque', 'Format_Credit Card', 'Format_Reinvestment', 'Format_Wire']
+
+Preprocessing finished. Final feature shape: (6924049, 35)
+Creating sequences with length 10 and step 5...
+Finished creating sequences. Final shape: (1503989, 10, 35)
+Final labels shape: (1503989,)
+
+SUCCESS: Sequence creation complete. N_FEATURES_PROC set to: 35
+Training DataLoader created. Data shape per item: torch.Size([10, 35])
+
+Initializing SSL models on cuda...
+TransactionFeatureCNN: InputFeat=35, OutputEmb=128
+TransactionSequenceEncoder_CNNthenGRU: FinalEmb=128
+Projection Head: Input=128, Hidden=128, Output=32
+Attempting to compile models with torch.compile()...
+Models compiled successfully.
+Loss Criterion: NTXentLoss, Temperature: 0.1
+
+--- Starting Unsupervised Training ---
+Epoch [1/10], Batch [2000/11749], Loss: 0.5491, Avg Epoch Loss: 1.1582
+Epoch [1/10], Batch [4000/11749], Loss: 0.3778, Avg Epoch Loss: 0.7942
+Epoch [1/10], Batch [6000/11749], Loss: 0.2793, Avg Epoch Loss: 0.6321
+Epoch [1/10], Batch [8000/11749], Loss: 0.2574, Avg Epoch Loss: 0.5365
+Epoch [1/10], Batch [10000/11749], Loss: 0.2411, Avg Epoch Loss: 0.4718
+Epoch [1/10], Batch [11749/11749], Loss: 0.2229, Avg Epoch Loss: 0.4296
+
+--- Epoch [1/10] Summary ---
+  Average Epoch Loss: 0.4296
+  Epoch Duration: 359.60s
+
+Epoch [2/10], Batch [2000/11749], Loss: 0.1680, Avg Epoch Loss: 0.1776
+Epoch [2/10], Batch [4000/11749], Loss: 0.1586, Avg Epoch Loss: 0.1717
+Epoch [2/10], Batch [6000/11749], Loss: 0.1199, Avg Epoch Loss: 0.1670
+Epoch [2/10], Batch [8000/11749], Loss: 0.1230, Avg Epoch Loss: 0.1628
+Epoch [2/10], Batch [10000/11749], Loss: 0.1240, Avg Epoch Loss: 0.1597
+Epoch [2/10], Batch [11749/11749], Loss: 0.1441, Avg Epoch Loss: 0.1570
+
+--- Epoch [2/10] Summary ---
+  Average Epoch Loss: 0.1570
+  Epoch Duration: 347.42s
+
+Epoch [3/10], Batch [2000/11749], Loss: 0.1374, Avg Epoch Loss: 0.1387
+Epoch [3/10], Batch [4000/11749], Loss: 0.1829, Avg Epoch Loss: 0.1376
+Epoch [3/10], Batch [6000/11749], Loss: 0.1200, Avg Epoch Loss: 0.1367
+Epoch [3/10], Batch [8000/11749], Loss: 0.1236, Avg Epoch Loss: 0.1355
+Epoch [3/10], Batch [10000/11749], Loss: 0.1313, Avg Epoch Loss: 0.1345
+Epoch [3/10], Batch [11749/11749], Loss: 0.1053, Avg Epoch Loss: 0.1335
+
+--- Epoch [3/10] Summary ---
+  Average Epoch Loss: 0.1335
+  Epoch Duration: 344.85s
+
+Epoch [4/10], Batch [2000/11749], Loss: 0.1273, Avg Epoch Loss: 0.1271
+Epoch [4/10], Batch [4000/11749], Loss: 0.1447, Avg Epoch Loss: 0.1265
+Epoch [4/10], Batch [6000/11749], Loss: 0.1145, Avg Epoch Loss: 0.1255
+Epoch [4/10], Batch [8000/11749], Loss: 0.1230, Avg Epoch Loss: 0.1252
+Epoch [4/10], Batch [10000/11749], Loss: 0.0842, Avg Epoch Loss: 0.1247
+Epoch [4/10], Batch [11749/11749], Loss: 0.1080, Avg Epoch Loss: 0.1240
+
+--- Epoch [4/10] Summary ---
+  Average Epoch Loss: 0.1240
+  Epoch Duration: 346.12s
+
+Epoch [5/10], Batch [2000/11749], Loss: 0.1067, Avg Epoch Loss: 0.1191
+Epoch [5/10], Batch [4000/11749], Loss: 0.0958, Avg Epoch Loss: 0.1180
+Epoch [5/10], Batch [6000/11749], Loss: 0.1520, Avg Epoch Loss: 0.1177
+Epoch [5/10], Batch [8000/11749], Loss: 0.1227, Avg Epoch Loss: 0.1168
+Epoch [5/10], Batch [10000/11749], Loss: 0.1068, Avg Epoch Loss: 0.1161
+Epoch [5/10], Batch [11749/11749], Loss: 0.1137, Avg Epoch Loss: 0.1156
+
+--- Epoch [5/10] Summary ---
+  Average Epoch Loss: 0.1156
+  Epoch Duration: 352.13s
+
+Epoch [6/10], Batch [2000/11749], Loss: 0.0943, Avg Epoch Loss: 0.1109
+Epoch [6/10], Batch [4000/11749], Loss: 0.1239, Avg Epoch Loss: 0.1099
+Epoch [6/10], Batch [6000/11749], Loss: 0.0967, Avg Epoch Loss: 0.1090
+Epoch [6/10], Batch [8000/11749], Loss: 0.0997, Avg Epoch Loss: 0.1083
+Epoch [6/10], Batch [10000/11749], Loss: 0.0993, Avg Epoch Loss: 0.1077
+Epoch [6/10], Batch [11749/11749], Loss: 0.1566, Avg Epoch Loss: 0.1074
+
+--- Epoch [6/10] Summary ---
+  Average Epoch Loss: 0.1074
+  Epoch Duration: 337.56s
+
+Epoch [7/10], Batch [2000/11749], Loss: 0.0681, Avg Epoch Loss: 0.1038
+Epoch [7/10], Batch [4000/11749], Loss: 0.0863, Avg Epoch Loss: 0.1040
+Epoch [7/10], Batch [6000/11749], Loss: 0.0979, Avg Epoch Loss: 0.1035
+Epoch [7/10], Batch [8000/11749], Loss: 0.0928, Avg Epoch Loss: 0.1033
+Epoch [7/10], Batch [10000/11749], Loss: 0.0948, Avg Epoch Loss: 0.1030
+Epoch [7/10], Batch [11749/11749], Loss: 0.1559, Avg Epoch Loss: 0.1028
+
+--- Epoch [7/10] Summary ---
+  Average Epoch Loss: 0.1028
+  Epoch Duration: 344.40s
+
+Epoch [8/10], Batch [2000/11749], Loss: 0.0844, Avg Epoch Loss: 0.1006
+Epoch [8/10], Batch [4000/11749], Loss: 0.0914, Avg Epoch Loss: 0.1008
+Epoch [8/10], Batch [6000/11749], Loss: 0.0913, Avg Epoch Loss: 0.0999
+Epoch [8/10], Batch [8000/11749], Loss: 0.0920, Avg Epoch Loss: 0.0999
+Epoch [8/10], Batch [10000/11749], Loss: 0.0913, Avg Epoch Loss: 0.0996
+Epoch [8/10], Batch [11749/11749], Loss: 0.0908, Avg Epoch Loss: 0.0993
+
+--- Epoch [8/10] Summary ---
+  Average Epoch Loss: 0.0993
+  Epoch Duration: 342.98s
+

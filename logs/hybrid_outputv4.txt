@@ -1,0 +1,185 @@
+Using device: cpu
+
+==================================================
+STAGE 1: SELF-SUPERVISED LEARNING (SSL) PRE-TRAINING
+==================================================
+
+Starting preprocessing...
+Dropping 'Is Laundering' column for SSL feature preparation.
+Processing Timestamp...
+Processing Account Numbers...
+Processing Amounts...
+Warning: Amount/Currency pairs are not always identical. Dropping 'Amount Paid' & 'Payment Currency'.
+Processing Categorical String Features (Currency, Payment Format)...
+
+Scaling all numerical features...
+Columns to be scaled: ['From Bank', 'To Bank', 'Hour_sin', 'Hour_cos', 'Minute_sin', 'Minute_cos', 'DayOfWeek_sin', 'DayOfWeek_cos', 'Month_sin', 'Month_cos', 'Account_Num', 'Account.1_Num', 'Amount_Log', 'Currency_Australian Dollar', 'Currency_Bitcoin', 'Currency_Brazil Real', 'Currency_Canadian Dollar', 'Currency_Euro', 'Currency_Mexican Peso', 'Currency_Ruble', 'Currency_Rupee', 'Currency_Saudi Riyal', 'Currency_Shekel', 'Currency_Swiss Franc', 'Currency_UK Pound', 'Currency_US Dollar', 'Currency_Yen', 'Currency_Yuan', 'Format_ACH', 'Format_Bitcoin', 'Format_Cash', 'Format_Cheque', 'Format_Credit Card', 'Format_Reinvestment', 'Format_Wire']
+
+Preprocessing finished. Final feature shape: (6924049, 35)
+Creating sequences with length 10 and step 5...
+Finished creating sequences. Final shape: (1503989, 10, 35)
+Final labels shape: (1503989,)
+
+SUCCESS: Sequence creation complete. N_FEATURES_PROC set to: 35
+Training DataLoader created. Data shape per item: torch.Size([10, 35])
+
+Initializing SSL models on cpu...
+TransactionFeatureCNN: InputFeat=35, OutputEmb=128
+TransactionSequenceEncoder_CNNthenGRU: FinalEmb=128
+Projection Head: Input=128, Hidden=128, Output=32
+Loss Criterion: NTXentLoss, Temperature: 0.1
+
+--- Starting Unsupervised Training ---
+Epoch [1/10], Batch [2000/11749], Loss: 0.4803, Avg Epoch Loss: 1.0601
+Epoch [1/10], Batch [4000/11749], Loss: 0.3706, Avg Epoch Loss: 0.7320
+Epoch [1/10], Batch [6000/11749], Loss: 0.3475, Avg Epoch Loss: 0.5868
+Epoch [1/10], Batch [8000/11749], Loss: 0.2633, Avg Epoch Loss: 0.5022
+Epoch [1/10], Batch [10000/11749], Loss: 0.2040, Avg Epoch Loss: 0.4465
+Epoch [1/10], Batch [11749/11749], Loss: 0.2640, Avg Epoch Loss: 0.4107
+
+--- Epoch [1/10] Summary ---
+  Average Epoch Loss: 0.4107
+  Epoch Duration: 4931.19s
+
+Epoch [2/10], Batch [2000/11749], Loss: 0.1920, Avg Epoch Loss: 0.1923
+Epoch [2/10], Batch [4000/11749], Loss: 0.1193, Avg Epoch Loss: 0.1845
+Epoch [2/10], Batch [6000/11749], Loss: 0.1363, Avg Epoch Loss: 0.1779
+Epoch [2/10], Batch [8000/11749], Loss: 0.1105, Avg Epoch Loss: 0.1728
+Epoch [2/10], Batch [10000/11749], Loss: 0.1398, Avg Epoch Loss: 0.1685
+Epoch [2/10], Batch [11749/11749], Loss: 0.1321, Avg Epoch Loss: 0.1652
+
+--- Epoch [2/10] Summary ---
+  Average Epoch Loss: 0.1652
+  Epoch Duration: 5144.91s
+
+Epoch [3/10], Batch [2000/11749], Loss: 0.0976, Avg Epoch Loss: 0.1409
+Epoch [3/10], Batch [4000/11749], Loss: 0.1328, Avg Epoch Loss: 0.1391
+Epoch [3/10], Batch [6000/11749], Loss: 0.1052, Avg Epoch Loss: 0.1380
+Epoch [3/10], Batch [8000/11749], Loss: 0.1308, Avg Epoch Loss: 0.1364
+Epoch [3/10], Batch [10000/11749], Loss: 0.1488, Avg Epoch Loss: 0.1352
+Epoch [3/10], Batch [11749/11749], Loss: 0.1700, Avg Epoch Loss: 0.1343
+
+--- Epoch [3/10] Summary ---
+  Average Epoch Loss: 0.1343
+  Epoch Duration: 5345.04s
+
+Epoch [4/10], Batch [2000/11749], Loss: 0.1062, Avg Epoch Loss: 0.1273
+Epoch [4/10], Batch [4000/11749], Loss: 0.1209, Avg Epoch Loss: 0.1259
+Epoch [4/10], Batch [6000/11749], Loss: 0.1226, Avg Epoch Loss: 0.1247
+Epoch [4/10], Batch [8000/11749], Loss: 0.1269, Avg Epoch Loss: 0.1239
+Epoch [4/10], Batch [10000/11749], Loss: 0.1363, Avg Epoch Loss: 0.1232
+Epoch [4/10], Batch [11749/11749], Loss: 0.1038, Avg Epoch Loss: 0.1225
+
+--- Epoch [4/10] Summary ---
+  Average Epoch Loss: 0.1225
+  Epoch Duration: 5456.20s
+
+Epoch [5/10], Batch [2000/11749], Loss: 0.1213, Avg Epoch Loss: 0.1163
+Epoch [5/10], Batch [4000/11749], Loss: 0.1644, Avg Epoch Loss: 0.1160
+Epoch [5/10], Batch [6000/11749], Loss: 0.1346, Avg Epoch Loss: 0.1153
+Epoch [5/10], Batch [8000/11749], Loss: 0.1391, Avg Epoch Loss: 0.1147
+Epoch [5/10], Batch [10000/11749], Loss: 0.1296, Avg Epoch Loss: 0.1144
+Epoch [5/10], Batch [11749/11749], Loss: 0.0997, Avg Epoch Loss: 0.1139
+
+--- Epoch [5/10] Summary ---
+  Average Epoch Loss: 0.1139
+  Epoch Duration: 5515.20s
+
+Epoch [6/10], Batch [2000/11749], Loss: 0.1009, Avg Epoch Loss: 0.1107
+Epoch [6/10], Batch [4000/11749], Loss: 0.1106, Avg Epoch Loss: 0.1102
+Epoch [6/10], Batch [6000/11749], Loss: 0.0909, Avg Epoch Loss: 0.1100
+Epoch [6/10], Batch [8000/11749], Loss: 0.1026, Avg Epoch Loss: 0.1094
+Epoch [6/10], Batch [10000/11749], Loss: 0.0983, Avg Epoch Loss: 0.1088
+Epoch [6/10], Batch [11749/11749], Loss: 0.1028, Avg Epoch Loss: 0.1084
+
+--- Epoch [6/10] Summary ---
+  Average Epoch Loss: 0.1084
+  Epoch Duration: 5656.05s
+
+Epoch [7/10], Batch [2000/11749], Loss: 0.0848, Avg Epoch Loss: 0.1041
+Epoch [7/10], Batch [4000/11749], Loss: 0.0980, Avg Epoch Loss: 0.1039
+Epoch [7/10], Batch [6000/11749], Loss: 0.1275, Avg Epoch Loss: 0.1035
+Epoch [7/10], Batch [8000/11749], Loss: 0.1018, Avg Epoch Loss: 0.1034
+Epoch [7/10], Batch [10000/11749], Loss: 0.0880, Avg Epoch Loss: 0.1030
+Epoch [7/10], Batch [11749/11749], Loss: 0.1165, Avg Epoch Loss: 0.1026
+
+--- Epoch [7/10] Summary ---
+  Average Epoch Loss: 0.1026
+  Epoch Duration: 5689.25s
+
+Epoch [8/10], Batch [2000/11749], Loss: 0.0793, Avg Epoch Loss: 0.1008
+Epoch [8/10], Batch [4000/11749], Loss: 0.1065, Avg Epoch Loss: 0.1009
+Epoch [8/10], Batch [6000/11749], Loss: 0.0995, Avg Epoch Loss: 0.1006
+Epoch [8/10], Batch [8000/11749], Loss: 0.1122, Avg Epoch Loss: 0.1002
+Epoch [8/10], Batch [10000/11749], Loss: 0.1483, Avg Epoch Loss: 0.0999
+Epoch [8/10], Batch [11749/11749], Loss: 0.0692, Avg Epoch Loss: 0.0996
+
+--- Epoch [8/10] Summary ---
+  Average Epoch Loss: 0.0996
+  Epoch Duration: 5562.62s
+
+Epoch [9/10], Batch [2000/11749], Loss: 0.1001, Avg Epoch Loss: 0.0976
+Epoch [9/10], Batch [4000/11749], Loss: 0.0846, Avg Epoch Loss: 0.0974
+Epoch [9/10], Batch [6000/11749], Loss: 0.0988, Avg Epoch Loss: 0.0971
+Epoch [9/10], Batch [8000/11749], Loss: 0.1478, Avg Epoch Loss: 0.0966
+Epoch [9/10], Batch [10000/11749], Loss: 0.1118, Avg Epoch Loss: 0.0964
+Epoch [9/10], Batch [11749/11749], Loss: 0.0743, Avg Epoch Loss: 0.0962
+
+--- Epoch [9/10] Summary ---
+  Average Epoch Loss: 0.0962
+  Epoch Duration: 5523.71s
+
+Epoch [10/10], Batch [2000/11749], Loss: 0.0920, Avg Epoch Loss: 0.0953
+Epoch [10/10], Batch [4000/11749], Loss: 0.0864, Avg Epoch Loss: 0.0946
+Epoch [10/10], Batch [6000/11749], Loss: 0.0716, Avg Epoch Loss: 0.0942
+Epoch [10/10], Batch [8000/11749], Loss: 0.0794, Avg Epoch Loss: 0.0941
+Epoch [10/10], Batch [10000/11749], Loss: 0.1076, Avg Epoch Loss: 0.0939
+Epoch [10/10], Batch [11749/11749], Loss: 0.0829, Avg Epoch Loss: 0.0937
+
+--- Epoch [10/10] Summary ---
+  Average Epoch Loss: 0.0937
+  Epoch Duration: 5550.53s
+
+--- SSL Training Script Finished ---
+
+==================================================
+STAGE 2: EMBEDDING GENERATION FOR GNN
+==================================================
+
+--- Step 1: Preprocessing all individual transactions for GNN ---
+Starting preprocessing...
+Dropping 'Is Laundering' column for SSL feature preparation.
+Processing Timestamp...
+Processing Account Numbers...
+Processing Amounts...
+Warning: Amount/Currency pairs are not always identical. Dropping 'Amount Paid' & 'Payment Currency'.
+Processing Categorical String Features (Currency, Payment Format)...
+
+Scaling all numerical features...
+Columns to be scaled: ['From Bank', 'To Bank', 'Hour_sin', 'Hour_cos', 'Minute_sin', 'Minute_cos', 'DayOfWeek_sin', 'DayOfWeek_cos', 'Month_sin', 'Month_cos', 'Account_Num', 'Account.1_Num', 'Amount_Log', 'Currency_Australian Dollar', 'Currency_Bitcoin', 'Currency_Brazil Real', 'Currency_Canadian Dollar', 'Currency_Euro', 'Currency_Mexican Peso', 'Currency_Ruble', 'Currency_Rupee', 'Currency_Saudi Riyal', 'Currency_Shekel', 'Currency_Swiss Franc', 'Currency_UK Pound', 'Currency_US Dollar', 'Currency_Yen', 'Currency_Yuan', 'Format_ACH', 'Format_Bitcoin', 'Format_Cash', 'Format_Cheque', 'Format_Credit Card', 'Format_Reinvestment', 'Format_Wire']
+
+Preprocessing finished. Final feature shape: (6924049, 35)
+Preprocessing complete. Feature matrix shape: (6924049, 35)
+
+--- Step 2: Aligning DataFrame and labels with preprocessed data ---
+Alignment successful.
+
+--- Step 3: Creating DataLoader for individual transactions ---
+DataLoader created.
+
+--- Step 4: Generating embeddings for all individual transactions ---
+
+--- Embedding Generation Complete ---
+Final shape of transaction embeddings: (6924049, 128)
+
+==================================================
+STAGE 3: GRAPH NEURAL NETWORK (GNN) TRAINING
+==================================================
+
+--- Starting Graph Construction ---
+Found 705903 unique accounts (nodes).
+Created edge_index with shape: torch.Size([2, 6924049])
+Created edge_attr (features) with shape: torch.Size([6924049, 128])
+Created edge_label (targets) with shape: torch.Size([6924049])
+
+--- Applying Train/Val/Test Split to Edges ---

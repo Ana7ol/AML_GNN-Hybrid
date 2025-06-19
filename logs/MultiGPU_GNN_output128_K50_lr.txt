@@ -1,0 +1,82 @@
+Thu Jun 12 17:17:02 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.86.10              Driver Version: 570.86.10      CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-16GB           On  |   00000000:86:00.0 Off |                    0 |
+| N/A   35C    P0             25W /  250W |       4MiB /  16384MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   1  Tesla V100-PCIE-16GB           On  |   00000000:D8:00.0 Off |                    0 |
+| N/A   38C    P0             27W /  250W |       4MiB /  16384MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Preprocessing data and converting to NumPy arrays (for PyG)...
+Found 2 GPUs. Spawning DDP processes.
+Running DDP on rank 0 / GPU 0.
+Using loss function: FocalLoss
+FocalLoss using alpha=0.25, gamma=2
+Running DDP on rank 1 / GPU 1.
+Using loss function: FocalLoss
+--- Epoch 1/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.8125, Duration: 875.45s
+  Global Eval ==> AUROC: 0.9355, AUPRC: 0.0130
+    F1 Score (at threshold 0.98): 0.0000
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      1.00      1.00   1383825
+ Illicit (1)       0.00      0.00      0.00       925
+
+    accuracy                           1.00   1384750
+   macro avg       0.50      0.50      0.50   1384750
+weighted avg       1.00      1.00      1.00   1384750
+
+    Confusion matrix:
+[[1383825       0]
+ [    925       0]]
+--- Epoch 2/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.5337, Duration: 890.94s
+  Global Eval ==> AUROC: 0.8958, AUPRC: 0.0171
+    F1 Score (at threshold 0.98): 0.0555
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      1.00      1.00   1383825
+ Illicit (1)       0.05      0.07      0.06       925
+
+    accuracy                           1.00   1384750
+   macro avg       0.52      0.53      0.53   1384750
+weighted avg       1.00      1.00      1.00   1384750
+
+    Confusion matrix:
+[[1382577    1248]
+ [    863      62]]
+--- Epoch 3/5 Summary (Rank 0) ---
+  Avg Train Loss: 0.3960, Duration: 894.56s
+  Global Eval ==> AUROC: 0.8876, AUPRC: 0.0175
+    F1 Score (at threshold 0.98): 0.0479
+    Classification Report:
+              precision    recall  f1-score   support
+
+   Licit (0)       1.00      1.00      1.00   1383825
+ Illicit (1)       0.03      0.08      0.05       925
+
+    accuracy                           1.00   1384750
+   macro avg       0.52      0.54      0.52   1384750
+weighted avg       1.00      1.00      1.00   1384750
+
+    Confusion matrix:
+[[1381692    2133]
+ [    850      75]]

@@ -7,8 +7,9 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
-from torch_geometric.data import Data, Dataset as PyGDataset, DataLoader as PyGDataLoader
+from torch_geometric.data import Data, Dataset as PyGDataset, DataLoader
 from torch_geometric.nn import SAGEConv
+from torch_geometric.loader import DataLoader as PyGDataLoader
 
 import pandas as pd
 import numpy as np
@@ -18,6 +19,25 @@ import time
 import gc
 import yaml
 import os
+import random
+import socket
+from contextlib import closing
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return str(s.getsockname()[1])
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def load_config(config_path="./config/config.yaml"):
     with open(config_path, 'r') as f:
@@ -25,35 +45,45 @@ def load_config(config_path="./config/config.yaml"):
     return config
 
 def preprocess_to_numpy_parts_for_pyg(df_raw_input, config):
+   
     print("Preprocessing data and converting to NumPy arrays (for PyG)...")
     df = df_raw_input.copy()
+    
     df['Account_str'] = df['Account'].astype(str)
     df['Account.1_str'] = df['Account.1'].astype(str)
     all_account_strings = pd.concat([df['Account_str'], df['Account.1_str']]).unique()
     account_str_to_global_id_map = {acc_str: i for i, acc_str in enumerate(all_account_strings)}
     num_unique_accounts = len(all_account_strings)
+    
     df['Sender_Global_ID'] = df['Account_str'].map(account_str_to_global_id_map).astype(np.int64)
     df['Receiver_Global_ID'] = df['Account.1_str'].map(account_str_to_global_id_map).astype(np.int64)
     df['Timestamp_dt'] = pd.to_datetime(df['Timestamp'], errors='coerce')
     df.dropna(subset=['Timestamp_dt'], inplace=True)
+    
     df['Time_Hour_Sin'] = np.sin(2 * np.pi * df['Timestamp_dt'].dt.hour / 24.0).astype(np.float32)
     df['Time_Hour_Cos'] = np.cos(2 * np.pi * df['Timestamp_dt'].dt.hour / 24.0).astype(np.float32)
     df['Amount Received'] = pd.to_numeric(df['Amount Received'], errors='coerce')
     df.dropna(subset=['Amount Received'], inplace=True)
+    
     df['Amount_Log'] = np.log1p(df['Amount Received']).astype(np.float32)
     df['Payment Format'] = df['Payment Format'].astype(str)
     df['Receiving Currency'] = df['Receiving Currency'].astype(str)
     df = pd.get_dummies(df, columns=['Payment Format', 'Receiving Currency'], prefix=['Format', 'Currency'], dummy_na=False, dtype=np.float32)
+    
     feature_cols_list = [col for col in df.columns if col.startswith('Time_') or col.startswith('Amount_') or col.startswith('Format_') or col.startswith('Currency_')]
+    
     for col in feature_cols_list:
         if df[col].isnull().any(): df[col].fillna(0.0, inplace=True)
         if df[col].dtype != np.float32: df[col] = df[col].astype(np.float32)
+    
     df.sort_values(by='Timestamp_dt', inplace=True)
     df.reset_index(drop=True, inplace=True)
+    
     sender_ids_np = df['Sender_Global_ID'].values
     receiver_ids_np = df['Receiver_Global_ID'].values
     labels_np = df['Is Laundering'].values.astype(np.float32)
     transaction_features_np = df[feature_cols_list].values
+    
     if transaction_features_np.shape[0] == 0:
         raise ValueError("No data remains after preprocessing.")
     return (sender_ids_np, receiver_ids_np, labels_np, transaction_features_np, num_unique_accounts, account_str_to_global_id_map, feature_cols_list, df)
@@ -61,6 +91,7 @@ def preprocess_to_numpy_parts_for_pyg(df_raw_input, config):
 class PyGSnapshotDatasetOnline(PyGDataset):
     def __init__(self, sender_ids_np, receiver_ids_np, labels_np, transaction_features_np, k_history, is_train_split=True, split_name="unknown"):
         super().__init__(None)
+        
         self.sender_ids_np = sender_ids_np
         self.receiver_ids_np = receiver_ids_np
         self.labels_np = labels_np
@@ -69,35 +100,57 @@ class PyGSnapshotDatasetOnline(PyGDataset):
         self.num_total_source_transactions = len(sender_ids_np)
         self.split_name = split_name
         self._len = self.num_total_source_transactions - self.k_history
+        
         if self._len <= 0:
             if is_train_split or self.num_total_source_transactions > 0:
                 raise ValueError(f"Not enough transactions in the {self.split_name} split ({self.num_total_source_transactions}) to form even one snapshot with k_history={self.k_history}. Dataset length would be {self._len}.")
             else:
                 print(f"Warning: {self.split_name} split has 0 source transactions. Dataset will be empty.")
+    
     def len(self): return self._len
+    
     def get(self, idx):
-        target_idx_global = idx + self.k_history
-        start_idx = max(0, target_idx_global - self.k_history)
-        end_idx = target_idx_global + 1
-        snapshot_sender_global_ids = self.sender_ids_np[start_idx:end_idx]
-        snapshot_receiver_global_ids = self.receiver_ids_np[start_idx:end_idx]
-        snapshot_edge_features_np = self.transaction_features_np[start_idx:end_idx]
-        target_tx_features_np = self.transaction_features_np[target_idx_global]
-        target_sender_global_id_val = self.sender_ids_np[target_idx_global]
-        target_receiver_global_id_val = self.receiver_ids_np[target_idx_global]
-        label_scalar_val = self.labels_np[target_idx_global]
-        unique_nodes_global_ids_in_snapshot = np.unique(np.concatenate([snapshot_sender_global_ids, snapshot_receiver_global_ids]))
-        x_node_global_ids = torch.from_numpy(unique_nodes_global_ids_in_snapshot).long()
-        global_id_to_local_idx_map = {gid: i for i, gid in enumerate(unique_nodes_global_ids_in_snapshot)}
-        source_nodes_local_np = np.array([global_id_to_local_idx_map[gid] for gid in snapshot_sender_global_ids], dtype=np.int64)
-        target_nodes_local_np = np.array([global_id_to_local_idx_map[gid] for gid in snapshot_receiver_global_ids], dtype=np.int64)
-        edge_index_snapshot = torch.from_numpy(np.array([source_nodes_local_np, target_nodes_local_np])).long()
-        edge_attr_snapshot = torch.from_numpy(snapshot_edge_features_np).float()
-        target_tx_features_tensor = torch.from_numpy(target_tx_features_np).float().unsqueeze(0)
-        label_tensor = torch.tensor(label_scalar_val, dtype=torch.float32).view(1, 1)
-        target_sender_local_idx_snapshot = torch.tensor(global_id_to_local_idx_map[target_sender_global_id_val], dtype=torch.long)
-        target_receiver_local_idx_snapshot = torch.tensor(global_id_to_local_idx_map[target_receiver_global_id_val], dtype=torch.long)
-        return Data(x_node_global_ids=x_node_global_ids, edge_index=edge_index_snapshot, edge_attr=edge_attr_snapshot, target_tx_features=target_tx_features_tensor, target_sender_local_idx=target_sender_local_idx_snapshot, target_receiver_local_idx=target_receiver_local_idx_snapshot, y=label_tensor, num_nodes=len(unique_nodes_global_ids_in_snapshot))
+        try: 
+            target_idx_global = idx + self.k_history
+            start_idx = max(0, target_idx_global - self.k_history)
+            end_idx = target_idx_global + 1
+            
+            snapshot_sender_global_ids = self.sender_ids_np[start_idx:end_idx]
+            snapshot_receiver_global_ids = self.receiver_ids_np[start_idx:end_idx]
+            snapshot_edge_features_np = self.transaction_features_np[start_idx:end_idx]
+            
+            target_tx_features_np = self.transaction_features_np[target_idx_global]
+            target_sender_global_id_val = self.sender_ids_np[target_idx_global]
+            target_receiver_global_id_val = self.receiver_ids_np[target_idx_global]
+            
+            label_scalar_val = self.labels_np[target_idx_global]
+            
+            unique_nodes_global_ids_in_snapshot = np.unique(np.concatenate([snapshot_sender_global_ids, snapshot_receiver_global_ids]))
+            x_node_global_ids = torch.from_numpy(unique_nodes_global_ids_in_snapshot).long()
+            
+            global_id_to_local_idx_map = {gid: i for i, gid in enumerate(unique_nodes_global_ids_in_snapshot)}
+            source_nodes_local_np = np.array([global_id_to_local_idx_map[gid] for gid in snapshot_sender_global_ids], dtype=np.int64)
+            target_nodes_local_np = np.array([global_id_to_local_idx_map[gid] for gid in snapshot_receiver_global_ids], dtype=np.int64)
+            
+            edge_index_snapshot = torch.from_numpy(np.array([source_nodes_local_np, target_nodes_local_np])).long()
+            edge_attr_snapshot = torch.from_numpy(snapshot_edge_features_np).float()
+            
+            target_tx_features_tensor = torch.from_numpy(target_tx_features_np).float().unsqueeze(0)
+            label_tensor = torch.tensor(label_scalar_val, dtype=torch.float32).view(1, 1)
+            
+            target_sender_local_idx_snapshot = torch.tensor(global_id_to_local_idx_map[target_sender_global_id_val], dtype=torch.long)
+            target_receiver_local_idx_snapshot = torch.tensor(global_id_to_local_idx_map[target_receiver_global_id_val], dtype=torch.long)
+            
+            return Data(x_node_global_ids=x_node_global_ids, edge_index=edge_index_snapshot, edge_attr=edge_attr_snapshot, target_tx_features=target_tx_features_tensor, target_sender_local_idx=target_sender_local_idx_snapshot, target_receiver_local_idx=target_receiver_local_idx_snapshot, y=label_tensor, num_nodes=len(unique_nodes_global_ids_in_snapshot))
+        except Exception as e:
+        # If ANY error happens inside the get method, print it loudly.
+            print(f"!!!!!!!!!! FATAL ERROR IN DATALOADER GET METHOD !!!!!!!!!", flush=True)
+            print(f"Error for index: {idx}", flush=True)
+            print(f"Error type: {type(e).__name__}", flush=True)
+            print(f"Error message: {e}", flush=True)
+            # Re-raise the exception to make sure the process crashes hard
+            raise e
+
 
 class PyGTemporalGNN(nn.Module):
     def __init__(self, num_total_accounts, account_embedding_dim, num_transaction_features, transaction_embedding_dim, gnn_hidden_dim, gnn_layers, num_classes=1):
@@ -211,6 +264,18 @@ def main_worker(rank, world_size, config, global_data_parts):
     # This flag is crucial. It's true only when we are in a multi-GPU spawned process.
     is_ddp = world_size > 1
     device = rank # Use the rank as the device ID
+    if 'random_seed' in config:
+        set_seed(config['random_seed'] + rank)
+
+    if rank == 0:
+        results_dir = "results"
+        # Create a descriptive name based on the key hyperparameters we are testing
+        run_name = (f"k_{config['k_neighborhood_transactions']}_"
+                    f"acc_emb_{config['account_embedding_dim']}_"
+                    f"trn_emb_{config['transaction_embedding_dim']}")
+        run_dir = os.path.join(results_dir, run_name)
+        os.makedirs(run_dir, exist_ok=True)
+        print(f"Saving results for this run in: {run_dir}", flush=True)
 
     if is_ddp:
         print(f"Running DDP on rank {rank} / GPU {device}.")
@@ -360,6 +425,16 @@ def main_worker(rank, world_size, config, global_data_parts):
         if rank == 0:
             all_preds_proba = torch.cat(gathered_preds).numpy().squeeze() if gathered_preds and gathered_preds[0].numel() > 0 else np.array([])
             all_labels = torch.cat(gathered_labels).numpy().squeeze() if gathered_labels and gathered_labels[0].numel() > 0 else np.array([])
+            
+            if all_preds_proba.size > 0:
+                results_df = pd.DataFrame({
+                    'y_true': all_labels,
+                    'y_pred_proba': all_preds_proba
+                })
+                # We need the 'run_dir' variable we created at the top
+                epoch_results_path = os.path.join(run_dir, f"epoch_{epoch+1}_results.csv")
+                results_df.to_csv(epoch_results_path, index=False)
+                print(f"Saved raw predictions for epoch {epoch+1} to {epoch_results_path}", flush=True)
 
             if all_preds_proba.size > 0 and len(np.unique(all_labels)) > 1:
                 auroc = roc_auc_score(all_labels, all_preds_proba)
@@ -367,7 +442,7 @@ def main_worker(rank, world_size, config, global_data_parts):
                 print(f"  Global Eval ==> AUROC: {auroc:.4f}, AUPRC: {auprc:.4f}")
                 
                 # convert probabilities to binary outcomes
-                threshold = 0.98
+                threshold = config.get('evaluation', {}).get('monitoring_threshold', 0.5) 
                 all_preds_binary = (all_preds_proba >= threshold).astype(int)
 
                 # --- Metrics that use binary predictions ---
@@ -382,40 +457,28 @@ def main_worker(rank, world_size, config, global_data_parts):
                 print("    Confusion matrix:")
                 print(cm)
 
-                print("\n--- Optimizing Threshold for Best TP/TN Balance (ROC Curve) ---", flush=True)
             
-                # Calculate points on the ROC curve
-                fpr, tpr, thresholds_roc = roc_curve(all_labels, all_preds_proba)
-
-                # We want to find the point on the curve closest to the top-left corner (0, 1)
-                # This point represents the best balance of high TPR (recall) and low FPR.
-                # The distance from the top-left corner is sqrt((1-tpr)^2 + fpr^2).
-                # We want to minimize this distance.
-                optimal_idx = np.argmin(np.sqrt((1 - tpr)**2 + fpr**2))
-                optimal_threshold_roc = thresholds_roc[optimal_idx]
-
-                # Calculate metrics at this new threshold
-                all_preds_roc_binary = (all_preds_proba >= optimal_threshold_roc).astype(int)
-                tn, fp, fn, tp = confusion_matrix(all_labels, all_preds_roc_binary).ravel()
-
-                recall_at_optimal = tp / (tp + fn)
-                specificity_at_optimal = tn / (tn + fp)
-
-                print(f"  Optimal threshold for TP/TN balance: {optimal_threshold_roc:.4f}", flush=True)
-                print(f"    Recall (TP Rate) at this threshold: {recall_at_optimal:.4f}", flush=True)
-                print(f"    Specificity (TN Rate) at this threshold: {specificity_at_optimal:.4f}", flush=True)
-
-                print("\n    --- Classification Report (at Best ROC Threshold) ---")
-                print(classification_report(all_labels, all_preds_roc_binary, target_names=["Licit (0)", "Illicit (1)"], zero_division=0))
-                print("    --- Confusion Matrix (at Best ROC Threshold) ---")
-                print(confusion_matrix(all_labels, all_preds_roc_binary))
-
             elif all_preds.size > 0:
                 print("  Global Eval - Only one class present in test labels. Metrics not available.")
             else:
                 print("  Global Eval - Test set is empty or too small.")
         
         if is_ddp: dist.barrier()
+    if rank == 0:
+        # We can re-create the model on the CPU to count parameters
+        # without interfering with the GPU model.
+        # This ensures we are using the correct config for THIS run.
+        print("\n--- Final Model Parameters for this Run ---")
+        temp_model = PyGTemporalGNN(
+            num_total_accounts=num_total_unique_accounts,
+            account_embedding_dim=config['account_embedding_dim'],
+            num_transaction_features=NUM_FEATURES_PER_TRANSACTION,
+            transaction_embedding_dim=config['transaction_embedding_dim'],
+            gnn_hidden_dim=config['gnn_hidden_dim'], gnn_layers=config['gnn_layers'],
+            num_classes=config['model_output_classes']
+        )
+        param_count = sum(p.numel() for p in temp_model.parameters())
+        print(f"Parameter amount: {param_count}", flush=True)
 
     if is_ddp:
         cleanup_ddp()
@@ -426,6 +489,9 @@ if __name__ == "__main__":
     if world_size == 0: # Handle CPU case
         world_size = 1 # Run as a single process
         print("No GPUs found or 'use_gpu' is false. Running on CPU.")
+    if world_size > 1:
+        os.environ['MASTER_PORT'] = find_free_port()
+        print(f"Found free port for DDP: {os.environ['MASTER_PORT']}")
 
     # Preprocess data once in the main process
     df_raw_main = pd.read_csv(CONFIG['data_path'])
@@ -437,14 +503,3 @@ if __name__ == "__main__":
     else:
         print(f"Found {world_size} device(s). Running in a single process.")
         main_worker(0, 1, CONFIG, global_data_parts_main)
-
-    # Calculate and print model parameters in the main process after everything is done
-    temp_model = PyGTemporalGNN(
-        num_total_accounts=global_data_parts_main[4],
-        account_embedding_dim=CONFIG['account_embedding_dim'],
-        num_transaction_features=global_data_parts_main[3].shape[1],
-        transaction_embedding_dim=CONFIG['transaction_embedding_dim'],
-        gnn_hidden_dim=CONFIG['gnn_hidden_dim'], gnn_layers=CONFIG['gnn_layers'],
-        num_classes=CONFIG['model_output_classes']
-    )
-    print("parameter amount: " + str(sum(p.numel() for p in temp_model.parameters())))

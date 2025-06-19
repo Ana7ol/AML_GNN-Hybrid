@@ -5,13 +5,18 @@ num_cpu_workers: 6
 data_path: "LI-Small_Trans.csv"
 k_neighborhood_transactions: 30
 train_split_ratio: 0.8
+random_seed: 42
 
 # Model Architecture
-account_embedding_dim: 256
+account_embedding_dim: 32
 transaction_embedding_dim: 128
 gnn_hidden_dim: 256
-gnn_layers: 3
+gnn_layers: 5
 model_output_classes: 1
+
+evaluation:
+  monitoring_threshold: 0.5
+  analysis_thresholds: [0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99]
 
 # Training
 epochs: 5
@@ -22,13 +27,15 @@ print_interval_batches: 1000
 pos_weight_enabled: true
 gradient_accumulation_steps: 1
 
-# Visualization
-visualization_enabled: true
-plot_threshold: 0.8
-
 
 # loss Focal/BCE
+#loss:
+  #type: "FocalLoss"
+    #focal_loss_alpha: 0.25
+    #focal_loss_gamma: 2
 loss:
-  type: "FocalLoss"
+  type: "BCEWithLogitsLoss"
+  pos_weight_enabled: True # This tells the code to calculate the positive class weight
+  # The focal_loss parameters below will be ignored since type is not "FocalLoss"
   focal_loss_alpha: 0.25
-  focal_loss_gamma: 2
+  focal_loss_gamma: 2.0
