@@ -7,4 +7,7 @@
 /gnn_weights.pth
 /jobs
 /results
+/__pycache__
 /logs
+/*.o*
+/*.e*

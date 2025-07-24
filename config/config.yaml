@@ -1,10 +1,11 @@
 distributed_backend: "nccl"
-num_cpu_workers: 6
+num_cpu_workers: 12
 
 # Data
 data_path: "LI-Small_Trans.csv"
 k_neighborhood_transactions: 40
-train_split_ratio: 0.8
+train_split_ratio: 0.7
+val_split_ratio: 0.15
 random_seed: 42
 
 # Model Architecture
@@ -20,7 +21,7 @@ evaluation:
 
 # Training
 epochs: 5
-batch_size_per_gpu: 256
+batch_size_per_gpu: 512
 learning_rate: 0.0001
 weight_decay: 0.0001
 print_interval_batches: 1000
