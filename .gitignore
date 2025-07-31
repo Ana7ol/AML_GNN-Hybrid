@@ -11,3 +11,5 @@
 /logs
 /*.o*
 /*.e*
+/saved_models
+/*.pth

@@ -1,16 +1,17 @@
 distributed_backend: "nccl"
-num_cpu_workers: 12
-
-# Data
+num_cpu_workers: 8
 data_path: "LI-Small_Trans.csv"
-k_neighborhood_transactions: 40
-train_split_ratio: 0.7
-val_split_ratio: 0.15
+model_save_dir: "saved_models"
 random_seed: 42
+train_split_ratio: 0.7
+val_split_ratio: 0.1
+
 
 # Model Architecture
-account_embedding_dim: 32
-transaction_embedding_dim: 128
+k_neighborhood_transactions: 100
+sequence_len: 10
+account_embedding_dim: 64
+transaction_embedding_dim: 64
 gnn_hidden_dim: 256
 gnn_layers: 5
 model_output_classes: 1
@@ -20,8 +21,8 @@ evaluation:
   analysis_thresholds: [0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99]
 
 # Training
-epochs: 5
-batch_size_per_gpu: 512
+epochs: 10
+batch_size_per_gpu: 516
 learning_rate: 0.0001
 weight_decay: 0.0001
 print_interval_batches: 1000
@@ -29,14 +30,22 @@ pos_weight_enabled: true
 gradient_accumulation_steps: 1
 
 
+scheduler:
+  enabled: true
+  mode: "max"         # We want to 'max'imize our AUPRC score
+  factor: 0.2         # Reduce LR by a factor of 5 (new_lr = lr * factor)
+  patience: 2         # Wait 2 epochs of no improvement before reducing LR
+  min_lr: 0.000001 
+
 # loss Focal/BCE
-#loss:
-  #type: "FocalLoss"
-    #focal_loss_alpha: 0.25
-    #focal_loss_gamma: 2
 loss:
+#  type: "FocalLoss"  # <--- THIS IS THE KEY CHANGE
+#  # The parameters below will now be used
+# focal_loss_alpha: 0.25
+# focal_loss_gamma: 2.0
+
   type: "BCEWithLogitsLoss"
   pos_weight_enabled: True # This tells the code to calculate the positive class weight
-  # The focal_loss parameters below will be ignored since type is not "FocalLoss"
-  focal_loss_alpha: 0.25
-  focal_loss_gamma: 2.0
+# # The focal_loss parameters below will be ignored since type is not "FocalLoss"
+# focal_loss_alpha: 0.25
+# focal_loss_gamma: 2.0

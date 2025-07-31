@@ -106,7 +106,7 @@ def load_and_preprocess_data(file_path: str) -> Tuple[np.ndarray, np.ndarray, pd
 
     cols_to_drop = ['Is Laundering', 'Account', 'Account.1', 'Timestamp', 'Amount Paid', 'Payment Currency']
     df_features = pd.get_dummies(df_gnn.drop(columns=cols_to_drop, errors='ignore'), columns=['Receiving Currency', 'Payment Format'], dummy_na=False, dtype=float)
-    
+
     X_features_np = StandardScaler().fit_transform(df_features)
     y_labels_np = df_gnn['Is Laundering'].values
 
@@ -116,19 +116,19 @@ def load_and_preprocess_data(file_path: str) -> Tuple[np.ndarray, np.ndarray, pd
 def train_or_load_encoder(args: argparse.Namespace, X_features: np.ndarray, y_labels: np.ndarray, class_counts: pd.Series) -> torch.Tensor:
     """Trains or loads a pre-trained transaction feature encoder."""
     print("\n" + "="*50 + "\nSTAGE 1 & 2: TRANSACTION ENCODER & EMBEDDING GENERATION\n" + "="*50, flush=True)
-    
+
     encoder_path = args.encoder_path
     if not os.path.exists(encoder_path) or args.force_retrain_encoder:
         print(f"Training new transaction encoder (force_retrain_encoder={args.force_retrain_encoder}).", flush=True)
         tx_encoder_with_head = EncoderWithHead(num_features=X_features.shape[1], embedding_dim=args.tx_emb).to(DEVICE)
-        
+
         ssl_dataset = TensorDataset(torch.from_numpy(X_features).float(), torch.from_numpy(y_labels).float().unsqueeze(1))
         ssl_loader = DataLoader(ssl_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
         ssl_optimizer = torch.optim.Adam(tx_encoder_with_head.parameters(), lr=args.lr)
-        
+
         pos_weight_ssl = torch.tensor([class_counts[0] / class_counts[1]], device=DEVICE)
         ssl_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight_ssl)
-        
+
         for epoch in range(args.ssl_epochs):
             tx_encoder_with_head.train()
             for data, target in ssl_loader:
@@ -139,50 +139,50 @@ def train_or_load_encoder(args: argparse.Namespace, X_features: np.ndarray, y_la
                 loss.backward()
                 ssl_optimizer.step()
             print(f"Tx Encoder Training Epoch {epoch+1}/{args.ssl_epochs}, Loss: {loss.item():.4f}", flush=True)
-            
+
         print(f"Training complete. Saving encoder weights to '{encoder_path}'", flush=True)
         torch.save(tx_encoder_with_head.encoder.state_dict(), encoder_path)
 
     tx_encoder = TransactionFeatureEncoder(num_features=X_features.shape[1], final_embedding_dim=args.tx_emb).to(DEVICE)
     print(f"Loading pre-trained encoder weights from '{encoder_path}'.", flush=True)
     tx_encoder.load_state_dict(torch.load(encoder_path, map_location=DEVICE))
-    
+
     print("\n--- Generating transaction embeddings using trained encoder ---", flush=True)
     tx_encoder.eval()
     with torch.no_grad():
         transaction_embeddings_ssl = tx_encoder(torch.from_numpy(X_features).float().to(DEVICE)).cpu()
     print(f"Generated SSL embeddings for {transaction_embeddings_ssl.shape[0]} transactions.", flush=True)
-    
+
     return transaction_embeddings_ssl
 
 def train_gnn_link_predictor(args: argparse.Namespace, ssl_embeddings: torch.Tensor, df_gnn: pd.DataFrame) -> Tuple[torch.Tensor, np.ndarray, np.ndarray]:
     """Trains the GNN on a link prediction task."""
     print("\n" + "="*50 + "\nSTAGE 3: GNN TRAINING\n" + "="*50, flush=True)
-    
+
     all_accounts = pd.concat([df_gnn['Account'], df_gnn['Account.1']]).unique()
     account_mapping = {acc_id: i for i, acc_id in enumerate(all_accounts)}
     num_unique_accounts = len(all_accounts)
-    
+
     source_nodes = df_gnn['Account'].map(account_mapping).values
     dest_nodes = df_gnn['Account.1'].map(account_mapping).values
     full_edge_index = torch.from_numpy(np.stack([source_nodes, dest_nodes])).to(torch.long)
-    
+
     print("\n--- Aggregating transaction embeddings to create initial node features ---", flush=True)
     initial_node_features = torch.zeros(num_unique_accounts, ssl_embeddings.shape[1])
     source_nodes_t = torch.from_numpy(source_nodes).long()
     dest_nodes_t = torch.from_numpy(dest_nodes).long()
     initial_node_features.scatter_add_(0, source_nodes_t.unsqueeze(1).repeat(1, ssl_embeddings.shape[1]), ssl_embeddings)
     initial_node_features.scatter_add_(0, dest_nodes_t.unsqueeze(1).repeat(1, ssl_embeddings.shape[1]), ssl_embeddings)
-    
+
     degrees = torch.bincount(source_nodes_t, minlength=num_unique_accounts) + torch.bincount(dest_nodes_t, minlength=num_unique_accounts)
     degrees[degrees == 0] = 1
     initial_node_features = initial_node_features / degrees.unsqueeze(1)
-    
+
     graph = Data(x=initial_node_features, edge_index=full_edge_index, num_nodes=num_unique_accounts)
     transform = RandomLinkSplit(num_val=0.1, num_test=0.2, is_undirected=False, add_negative_train_samples=True)
     train_data, _, _ = transform(graph)
     train_data.to(DEVICE)
-    
+
     gnn_model = LinkPredictorGNN(in_channels=initial_node_features.shape[1], hidden_dim=args.gnn_hidden_dim).to(DEVICE)
     if torch.cuda.device_count() > 1:
         print(f"Using {torch.cuda.device_count()} GPUs for GNN training.")
@@ -191,34 +191,34 @@ def train_gnn_link_predictor(args: argparse.Namespace, ssl_embeddings: torch.Ten
 
     print("\n--- Starting GNN Training on Link Prediction Task with Gradient Accumulation ---", flush=True)
     accumulation_steps = 8
-    
+
     for epoch in range(1, args.gnn_epochs + 1):
         gnn_model.train()
         model_to_train = gnn_model.module if isinstance(gnn_model, nn.DataParallel) else gnn_model
-        
+
         h = model_to_train.encode(train_data.x, train_data.edge_index)
-        
+
         supervision_edges = train_data.edge_label_index
         supervision_labels = train_data.edge_label.float()
-        
+
         gnn_optimizer.zero_grad()
-        
+
         chunk_size = len(supervision_labels) // accumulation_steps
         for i in range(accumulation_steps):
             start_idx = i * chunk_size
             end_idx = (i + 1) * chunk_size if i < accumulation_steps - 1 else len(supervision_labels)
-            
+
             chunk_edge_index = supervision_edges[:, start_idx:end_idx]
             chunk_labels = supervision_labels[start_idx:end_idx]
-            
+
             preds = model_to_train.decode(h, chunk_edge_index)
             loss = F.binary_cross_entropy_with_logits(preds.squeeze(), chunk_labels) / accumulation_steps
-            
+
             is_last_step = (i == accumulation_steps - 1)
             loss.backward(retain_graph=not is_last_step)
-            
+
         gnn_optimizer.step()
-        
+
         if epoch % 10 == 0 or epoch == 1:
             print(f'Epoch: {epoch:03d}/{args.gnn_epochs}, Last Chunk Loss: {loss.item() * accumulation_steps:.4f}', flush=True)
 
@@ -227,39 +227,50 @@ def train_gnn_link_predictor(args: argparse.Namespace, ssl_embeddings: torch.Ten
     with torch.no_grad():
         model_to_run = gnn_model.module if isinstance(gnn_model, nn.DataParallel) else gnn_model
         final_node_embeddings = model_to_run.encode(graph.x.to(DEVICE), graph.edge_index.to(DEVICE)).cpu()
-        
+
     return final_node_embeddings, source_nodes, dest_nodes
 
 def print_evaluation_metrics(y_true: np.ndarray, y_pred_prob: np.ndarray, model_name: str):
     """Prints a standard set of classification evaluation metrics."""
+    # Ensure inputs are 1D arrays
+    y_true = y_true.squeeze()
+    y_pred_prob = y_pred_prob.squeeze()
     y_pred_class = (y_pred_prob > 0.5).astype(int)
-    
+
     print(f"\n--- Final Evaluation ({model_name}) ---", flush=True)
-    print(f"AUROC: {roc_auc_score(y_true, y_pred_prob):.4f}")
-    print(f"AUPRC: {average_precision_score(y_true, y_pred_prob):.4f}")
-    
+    if len(np.unique(y_true)) > 1:
+        print(f"AUROC: {roc_auc_score(y_true, y_pred_prob):.4f}")
+        print(f"AUPRC: {average_precision_score(y_true, y_pred_prob):.4f}")
+    else:
+        print("Skipping AUROC/AUPRC calculation: only one class present in y_true.")
+
     print(f"\n--- Confusion Matrix ({model_name}) ---", flush=True)
     cm = confusion_matrix(y_true, y_pred_class)
     print(pd.DataFrame(cm, index=['Actual Normal', 'Actual Illicit'], columns=['Predicted Normal', 'Predicted Illicit']))
-    
+
     print(f"\n--- Classification Report ({model_name}) ---", flush=True)
     print(classification_report(y_true, y_pred_class, target_names=['Normal', 'Illicit'], zero_division=0))
 
-def train_and_evaluate_nn_classifier(args: argparse.Namespace, X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor, y_test: torch.Tensor, class_counts: pd.Series):
-    """Trains and evaluates the downstream PyTorch NN classifier."""
+# MODIFICATION: Updated function signature and added epoch-wise evaluation
+def train_and_evaluate_nn_classifier(args: argparse.Namespace, X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor, y_test: torch.Tensor, class_counts: pd.Series, run_dir: str):
+    """Trains and evaluates the downstream PyTorch NN classifier, saving results each epoch."""
     print("\n" + "="*50 + "\nSTAGE 4: DOWNSTREAM CLASSIFICATION (PYTORCH NN)\n" + "="*50, flush=True)
-    
+
     train_dataset = TensorDataset(X_train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    
+
     classifier_nn = DownstreamClassifier(input_dim=X_train.shape[1], hidden_dim=args.downstream_hidden_dim).to(DEVICE)
     optimizer = torch.optim.Adam(classifier_nn.parameters(), lr=args.lr)
-    
+
     pos_weight = torch.tensor([class_counts[0] / class_counts[1]], device=DEVICE)
     print(f"Using pos_weight for the rare class: {pos_weight.item():.2f}", flush=True)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
+    # Convert test labels to numpy once for use in the loop
+    y_test_np = y_test.numpy().squeeze()
+
     for epoch in range(1, args.downstream_epochs + 1):
+        # --- Training Phase ---
         classifier_nn.train()
         total_loss = 0
         for data, target in train_loader:
@@ -270,27 +281,36 @@ def train_and_evaluate_nn_classifier(args: argparse.Namespace, X_train: torch.Te
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-        if epoch % 10 == 0 or epoch == 1:
-            print(f"Downstream NN Epoch {epoch:03d}/{args.downstream_epochs}, Avg Loss: {total_loss/len(train_loader):.4f}", flush=True)
+        
+        avg_train_loss = total_loss / len(train_loader)
+        print(f"\n--- Downstream NN Epoch {epoch}/{args.downstream_epochs} ---", flush=True)
+        print(f"  Avg Train Loss: {avg_train_loss:.4f}", flush=True)
 
+        # --- Evaluation & Reporting Phase (per epoch) ---
+        classifier_nn.eval()
+        with torch.no_grad():
+            test_preds = classifier_nn(X_test.to(DEVICE))
+            test_probs_nn = torch.sigmoid(test_preds).cpu().numpy().squeeze()
+
+        # Save results to CSV for the current epoch
+        results_df = pd.DataFrame({'y_true': y_test_np, 'y_pred_proba': test_probs_nn})
+        results_df.to_csv(os.path.join(run_dir, f"epoch_{epoch}_results.csv"), index=False)
+
+        # Print metrics for the current epoch
+        if len(np.unique(y_test_np)) > 1:
+            test_auroc = roc_auc_score(y_test_np, test_probs_nn)
+            test_auprc = average_precision_score(y_test_np, test_probs_nn)
+            print(f"  Test Eval    ==> AUROC: {test_auroc:.4f}, AUPRC: {test_auprc:.4f}", flush=True)
+
+    # --- Final Comprehensive Evaluation after all epochs ---
+    print("\n" + "="*50 + "\nFINAL EVALUATION AFTER ALL EPOCHS\n" + "="*50, flush=True)
     classifier_nn.eval()
     with torch.no_grad():
-        test_preds = classifier_nn(X_test.to(DEVICE))
-        test_probs_nn = torch.sigmoid(test_preds).cpu().numpy()
-        
-    print_evaluation_metrics(y_test.numpy(), test_probs_nn, "PyTorch NN")
+        final_preds = classifier_nn(X_test.to(DEVICE))
+        final_probs = torch.sigmoid(final_preds).cpu().numpy()
+    
+    print_evaluation_metrics(y_test.numpy(), final_probs, "PyTorch NN")
 
-def train_and_evaluate_rf_classifier(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor, y_test: torch.Tensor):
-    """Trains and evaluates the downstream Random Forest classifier."""
-    print("\n" + "="*50 + "\nSTAGE 5: DOWNSTREAM CLASSIFICATION (RANDOM FOREST)\n" + "="*50, flush=True)
-    print("\n--- Training a Random Forest Classifier with Balanced Class Weights ---", flush=True)
-    
-    classifier_rf = RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1)
-    classifier_rf.fit(X_train.numpy(), y_train.numpy().ravel())
-    
-    y_prob_rf = classifier_rf.predict_proba(X_test.numpy())[:, 1]
-    
-    print_evaluation_metrics(y_test.numpy(), y_prob_rf, "Random Forest")
 
 # --- 5. MAIN EXECUTION BLOCK ---
 
@@ -298,6 +318,23 @@ def main(args: argparse.Namespace):
     """Main function to run the entire pipeline."""
     print("Using device:", DEVICE)
     print("Current configuration:", args)
+
+    # MODIFICATION: Added logic to create a unique results directory for each run
+    results_dir = "hybrid_results"
+    name_parts = [
+        "hybrid",
+        f"txEmb{args.tx_emb}",
+        f"gnnHidden{args.gnn_hidden_dim}",
+        f"downHidden{args.downstream_hidden_dim}",
+        f"lr{args.lr}",
+        f"sslE{args.ssl_epochs}",
+        f"gnnE{args.gnn_epochs}",
+        f"downE{args.downstream_epochs}"
+    ]
+    run_name = "_".join(name_parts)
+    run_dir = os.path.join(results_dir, run_name)
+    os.makedirs(run_dir, exist_ok=True)
+    print(f"\nSaving results for this run in: {run_dir}", flush=True)
 
     # --- DATA PREP ---
     X_features_np, y_labels_np, df_gnn, class_counts = load_and_preprocess_data(args.data_path)
@@ -318,12 +355,10 @@ def main(args: argparse.Namespace):
     y_labels_tensor = torch.tensor(y_labels_np, dtype=torch.float32).unsqueeze(1)
     X_train, X_test, y_train, y_test = train_test_split(
         final_transaction_embeddings, y_labels_tensor, test_size=0.3, random_state=42, stratify=y_labels_tensor)
-    
-    # --- STAGE 4: PYTORCH CLASSIFIER ---
-    train_and_evaluate_nn_classifier(args, X_train, y_train, X_test, y_test, class_counts)
 
-    # --- STAGE 5: RANDOM FOREST CLASSIFIER ---
-    train_and_evaluate_rf_classifier(X_train, y_train, X_test, y_test)
+    # --- STAGE 4: PYTORCH CLASSIFIER ---
+    # MODIFICATION: Pass the run_dir to the training function
+    train_and_evaluate_nn_classifier(args, X_train, y_train, X_test, y_test, class_counts, run_dir)
 
 
 if __name__ == '__main__':
@@ -332,21 +367,21 @@ if __name__ == '__main__':
     # Data and Path Arguments
     parser.add_argument('--data_path', type=str, default='LI-Small_Trans.csv', help='Path to the transaction data CSV file.')
     parser.add_argument('--encoder_path', type=str, default='ssl_encoder_refactored.pth', help='Path to save/load the pre-trained transaction encoder.')
-    
+
     # Model Dimension Arguments
     parser.add_argument('--tx_emb', type=int, default=128, help='Embedding dimension for the initial transaction encoder.')
     parser.add_argument('--gnn_hidden_dim', type=int, default=128, help='Hidden dimension for the GNN.')
     parser.add_argument('--downstream_hidden_dim', type=int, default=128, help='Hidden dimension for the downstream MLP classifier.')
-    
+
     # Training Hyperparameters
     parser.add_argument('--ssl_epochs', type=int, default=10, help='Number of epochs for pre-training the transaction encoder.')
     parser.add_argument('--gnn_epochs', type=int, default=100, help='Number of epochs for training the GNN.')
     parser.add_argument('--downstream_epochs', type=int, default=100, help='Number of epochs for training the downstream classifier.')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for all optimizers.')
     parser.add_argument('--batch_size', type=int, default=4096, help='Batch size for encoder and downstream training.')
-    
+
     # Control Arguments
     parser.add_argument('--force_retrain_encoder', action='store_true', help='If set, the script will retrain the encoder even if a saved file exists.')
-    
+
     args = parser.parse_args()
     main(args)
