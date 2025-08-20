@@ -8,7 +8,7 @@
 /hybrid_results
 /plots_report
 /saved_models
-
+/.DS_Store
 /logs
 /*.o*
 /*.e*
