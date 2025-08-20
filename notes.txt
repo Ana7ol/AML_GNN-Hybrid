@@ -1,0 +1,11 @@
+An important question to answer is "so What?".
+I should focus on the depth rather variety, meaning are approx. 4 models should be enough.
+
+might test the CNN-GRU model on the synthetic dataset?
+I forgot to save the model
+
+Writing paper:
+
+Why did I choose exactly these models?
+
+

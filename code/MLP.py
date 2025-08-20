@@ -1,5 +1,3 @@
-# run_benchmark_mlp.py
-
 # --- 1. IMPORTS ---
 import torch
 import torch.nn as nn

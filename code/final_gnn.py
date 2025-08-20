@@ -1,22 +1,3 @@
-# ==============================================================================
-# GNN for Temporal Transaction Graph Classification
-# ==============================================================================
-#
-# Description:
-# This script trains a Graph Neural Network (GNN) to classify financial
-# transactions as either licit or potentially part of a money laundering scheme.
-# It models transactions as a temporal graph, creating snapshots of recent
-# activity to make predictions on target transactions.
-#
-# The script supports:
-#   - Dynamic graph creation using a sliding window (k-history).
-#   - Distributed Data Parallel (DDP) training for multi-GPU setups.
-#   - Hyperparameter tuning via command-line arguments.
-#   - Special modes for analyzing transactions within or related to specific banks.
-#
-# ==============================================================================
-
-# --- Standard Library Imports ---
 import os
 import argparse
 import random
@@ -24,7 +5,6 @@ import socket
 from contextlib import closing
 import time
 
-# --- Third-Party Imports ---
 import numpy as np
 import pandas as pd
 import torch
@@ -48,7 +28,11 @@ from tqdm import tqdm
 # ==============================================================================
 
 def get_args():
-    """Parses command-line arguments for the training script."""
+    """
+    Parses command-line arguments for the training script.
+    Batch_size, Gnn_hidden_dim and Epoch count can only be changed in the yaml file
+
+    """
     parser = argparse.ArgumentParser(description="GNN Training Script for Transaction Classification")
 
     # --- Key Hyperparameters ---
@@ -441,9 +425,25 @@ def main_worker(rank, world_size, master_port, config, global_data_parts):
     }
 
     # Slicing the numpy arrays is memory efficient (creates views, not copies)
-    train_data_nps = (sender_ids[:train_end], receiver_ids[:train_end], labels[:train_end], tx_features[:train_end], sender_banks[:train_end], receiver_banks[:train_end])
-    val_data_nps = (sender_ids[train_end:val_end], receiver_ids[train_end:val_end], labels[train_end:val_end], tx_features[train_end:val_end], sender_banks[train_end:val_end], receiver_banks[train_end:val_end])
-    test_data_nps = (sender_ids[val_end:], receiver_ids[val_end:], labels[val_end:], tx_features[val_end:], sender_banks[val_end:], receiver_banks[val_end:])
+    train_data_nps = (sender_ids[:train_end],
+            receiver_ids[:train_end], labels[:train_end], 
+            tx_features[:train_end], 
+            sender_banks[:train_end], 
+            receiver_banks[:train_end])
+
+    val_data_nps = (sender_ids[train_end:val_end], 
+            receiver_ids[train_end:val_end], 
+            labels[train_end:val_end], 
+            tx_features[train_end:val_end], 
+            sender_banks[train_end:val_end], 
+            receiver_banks[train_end:val_end])
+
+    test_data_nps = (sender_ids[val_end:], 
+            receiver_ids[val_end:], 
+            labels[val_end:], 
+            tx_features[val_end:], 
+            sender_banks[val_end:], 
+            receiver_banks[val_end:])
 
     train_dataset = PyGSnapshotDatasetOnline(train_data_nps, is_train_split=True, split_name="train", **dataset_args)
     val_dataset = PyGSnapshotDatasetOnline(val_data_nps, is_train_split=False, split_name="validation", **dataset_args) if len(val_data_nps[0]) > 0 else None
