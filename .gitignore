@@ -10,6 +10,7 @@
 /saved_models
 /.DS_Store
 /logs
+notes.txt
 /*.o*
 /*.e*
 /*.pth
